@@ -17,8 +17,8 @@ const corsOptions = {
     const allowedOrigins = [
       'http://localhost:3000', 
       'http://127.0.0.1:3000',
-      'https://dating-app-frontend-devs-projects-a73e514b.vercel.app',
-      'https://dating-app-frontend-devs-projects-a73e514b.vercel.app/',
+      'https://dating-app-frontend-ten.vercel.app',
+      'https://dating-app-frontend-ten.vercel.app/',
       process.env.FRONTEND_URL
     ].filter(Boolean);
     
