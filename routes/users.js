@@ -1,9 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const User = require('../models/User');
 const Profile = require('../models/Profile');
+const PasswordReset = require('../models/PasswordReset');
 const auth = require('../middleware/auth');
+const { sendPasswordResetEmail, sendPasswordResetSuccessEmail } = require('../services/emailService');
 
 // Register a new user
 router.post('/register', async (req, res) => {
@@ -197,6 +200,108 @@ router.get('/stats', auth, async (req, res) => {
   } catch (error) {
     console.error('Error fetching user stats:', error);
     res.status(500).json({ message: 'Error fetching user stats' });
+  }
+});
+
+// Request password reset
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    // Check if user exists
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Generate reset token
+    const token = crypto.randomBytes(32).toString('hex');
+    
+    // Save reset token to database
+    const passwordReset = new PasswordReset({
+      email,
+      token
+    });
+    await passwordReset.save();
+
+    // Send reset email
+    const frontendUrl = process.env.FRONTEND_URL || 'https://dating-app-frontend-ten.vercel.app';
+    const emailSent = await sendPasswordResetEmail(email, token, frontendUrl);
+
+    if (!emailSent) {
+      return res.status(500).json({ message: 'Error sending reset email' });
+    }
+
+    res.json({ message: 'Password reset email sent successfully' });
+
+  } catch (error) {
+    console.error('Error requesting password reset:', error);
+    res.status(500).json({ message: 'Error requesting password reset' });
+  }
+});
+
+// Reset password with token
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    // Find reset token
+    const passwordReset = await PasswordReset.findOne({ token });
+    
+    if (!passwordReset) {
+      return res.status(400).json({ message: 'Invalid or expired reset token' });
+    }
+
+    // Check if token is valid
+    if (!passwordReset.isValid()) {
+      return res.status(400).json({ message: 'Reset token has expired or been used' });
+    }
+
+    // Find user by email
+    const user = await User.findOne({ email: passwordReset.email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Update password
+    user.password = newPassword;
+    await user.save();
+
+    // Mark token as used
+    passwordReset.used = true;
+    await passwordReset.save();
+
+    // Send success email
+    await sendPasswordResetSuccessEmail(user.email);
+
+    res.json({ message: 'Password reset successfully' });
+
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    res.status(500).json({ message: 'Error resetting password' });
+  }
+});
+
+// Verify reset token
+router.get('/verify-reset-token/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    const passwordReset = await PasswordReset.findOne({ token });
+    
+    if (!passwordReset) {
+      return res.status(400).json({ message: 'Invalid reset token' });
+    }
+
+    if (!passwordReset.isValid()) {
+      return res.status(400).json({ message: 'Reset token has expired or been used' });
+    }
+
+    res.json({ message: 'Token is valid' });
+
+  } catch (error) {
+    console.error('Error verifying reset token:', error);
+    res.status(500).json({ message: 'Error verifying reset token' });
   }
 });
 
