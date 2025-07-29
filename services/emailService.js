@@ -1,26 +1,16 @@
-const nodemailer = require('nodemailer');
+const sgMail = require('@sendgrid/mail');
 
-// Create transporter (using Gmail for development)
-const createTransporter = () => {
-  return nodemailer.createTransporter({
-    service: 'gmail',
-    auth: {
-      user: process.env.EMAIL_USER || 'your-email@gmail.com',
-      pass: process.env.EMAIL_PASS || 'your-app-password'
-    }
-  });
-};
+// Initialize SendGrid with API key
+sgMail.setApiKey(process.env.SENDGRID_API_KEY || 'your-sendgrid-api-key');
 
 // Send password reset email
 const sendPasswordResetEmail = async (email, token, frontendUrl) => {
   try {
-    const transporter = createTransporter();
-    
     const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
     
-    const mailOptions = {
-      from: process.env.EMAIL_USER || 'your-email@gmail.com',
+    const msg = {
       to: email,
+      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@yourdomain.com',
       subject: 'Password Reset Request - Dating App',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -47,8 +37,8 @@ const sendPasswordResetEmail = async (email, token, frontendUrl) => {
       `
     };
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Password reset email sent:', info.messageId);
+    await sgMail.send(msg);
+    console.log('Password reset email sent successfully');
     return true;
   } catch (error) {
     console.error('Error sending password reset email:', error);
@@ -59,11 +49,9 @@ const sendPasswordResetEmail = async (email, token, frontendUrl) => {
 // Send password reset success email
 const sendPasswordResetSuccessEmail = async (email) => {
   try {
-    const transporter = createTransporter();
-    
-    const mailOptions = {
-      from: process.env.EMAIL_USER || 'your-email@gmail.com',
+    const msg = {
       to: email,
+      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@yourdomain.com',
       subject: 'Password Reset Successful - Dating App',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -79,8 +67,8 @@ const sendPasswordResetSuccessEmail = async (email) => {
       `
     };
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Password reset success email sent:', info.messageId);
+    await sgMail.send(msg);
+    console.log('Password reset success email sent successfully');
     return true;
   } catch (error) {
     console.error('Error sending password reset success email:', error);
