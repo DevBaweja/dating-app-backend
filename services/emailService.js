@@ -1,16 +1,16 @@
-const sgMail = require('@sendgrid/mail');
+const { Resend } = require('resend');
 
-// Initialize SendGrid with API key
-sgMail.setApiKey(process.env.SENDGRID_API_KEY || 'your-sendgrid-api-key');
+// Initialize Resend with API key
+const resend = new Resend(process.env.RESEND_API_KEY || 'your-resend-api-key');
 
 // Send password reset email
 const sendPasswordResetEmail = async (email, token, frontendUrl) => {
   try {
     const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
     
-    const msg = {
-      to: email,
-      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@yourdomain.com',
+    const { data, error } = await resend.emails.send({
+      from: 'Dating App <noreply@resend.dev>',
+      to: [email],
       subject: 'Password Reset Request - Dating App',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -35,9 +35,13 @@ const sendPasswordResetEmail = async (email, token, frontendUrl) => {
           </p>
         </div>
       `
-    };
+    });
 
-    await sgMail.send(msg);
+    if (error) {
+      console.error('Error sending email:', error);
+      return false;
+    }
+
     console.log('Password reset email sent successfully');
     return true;
   } catch (error) {
@@ -49,9 +53,9 @@ const sendPasswordResetEmail = async (email, token, frontendUrl) => {
 // Send password reset success email
 const sendPasswordResetSuccessEmail = async (email) => {
   try {
-    const msg = {
-      to: email,
-      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@yourdomain.com',
+    const { data, error } = await resend.emails.send({
+      from: 'Dating App <noreply@resend.dev>',
+      to: [email],
       subject: 'Password Reset Successful - Dating App',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -65,9 +69,13 @@ const sendPasswordResetSuccessEmail = async (email) => {
           </p>
         </div>
       `
-    };
+    });
 
-    await sgMail.send(msg);
+    if (error) {
+      console.error('Error sending success email:', error);
+      return false;
+    }
+
     console.log('Password reset success email sent successfully');
     return true;
   } catch (error) {
