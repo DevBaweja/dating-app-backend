@@ -10,15 +10,28 @@ const app = express();
 
 // CORS Configuration
 const corsOptions = {
-  origin: [
-    'http://localhost:3000', 
-    'http://127.0.0.1:3000',
-    'https://dating-app-frontend-devs-projects-a73e514b.vercel.app', // Your Vercel frontend URL
-    process.env.FRONTEND_URL // Allow environment variable for frontend URL
-  ].filter(Boolean), // Remove undefined values
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      'http://localhost:3000', 
+      'http://127.0.0.1:3000',
+      'https://dating-app-frontend-devs-projects-a73e514b.vercel.app',
+      'https://dating-app-frontend-devs-projects-a73e514b.vercel.app/',
+      process.env.FRONTEND_URL
+    ].filter(Boolean);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   optionsSuccessStatus: 200
 };
 
@@ -29,6 +42,18 @@ app.use(express.urlencoded({ extended: true }));
 
 // Handle preflight requests
 app.options('*', cors(corsOptions));
+
+// CORS error handling
+app.use((err, req, res, next) => {
+  if (err.message === 'Not allowed by CORS') {
+    return res.status(403).json({
+      error: 'CORS error',
+      message: 'Origin not allowed',
+      origin: req.headers.origin
+    });
+  }
+  next(err);
+});
 
 // MongoDB Connection
 const connectDB = async () => {
